@@ -9,6 +9,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private BufferedReader reader;
     private BufferedWriter writer;
     private Socket socket;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,11 +39,21 @@ public class MainActivity extends AppCompatActivity {
 
         bt_ingresar.setOnClickListener(
                 (v)->{
-                    String username = et_User.getText().toString();
-                    String password = et_Password.getText().toString();
-                    sendMessage(username+"----"+password);
-                    //Intent i = new Intent(this, Welcome_Activity.class);
-                    //startActivity(i);
+                    Gson gson = new Gson();
+                    boolean isEmpty = et_User.getText().toString().trim().isEmpty() ||  et_Password.getText().toString().trim().isEmpty();
+                    if(!isEmpty){
+                        String username = et_User.getText().toString();
+                        String password = et_Password.getText().toString();
+
+                        User obj = new User(username,password);
+                        String json = gson.toJson(obj);
+                        sendMessage(json);
+                    }else{
+                        String msgNo = "Llena todos los campos para continuar";
+                        Toast toast = Toast.makeText(this, msgNo, Toast.LENGTH_LONG);
+                        toast.show();
+                    }
+
 
                 }
         );
@@ -59,19 +72,32 @@ public class MainActivity extends AppCompatActivity {
                         OutputStream os = socket.getOutputStream();
                         OutputStreamWriter osw = new OutputStreamWriter(os);
                         writer = new BufferedWriter(osw);
+                        Gson gson = new Gson();
 
                         while(true) {
-                            String line = reader.readLine();
 
-                            runOnUiThread(
-                                    ()->{
-                                       Toast toast = Toast.makeText(this,line,Toast.LENGTH_LONG);
-                                        toast.show();
-                                    }
-                            );
+                            String line = reader.readLine();
+                            Comprobacion obj = gson.fromJson(line,Comprobacion.class);
+                            Log.e("Mensaje recibido ", line);
+
+                            if(obj.isRegistrado()){
+                                runOnUiThread(
+                                        ()->{
+                                            Intent i = new Intent(this, Welcome_Activity.class);
+                                            startActivity(i);
+                                        }
+                                );
+
+                            }else{
+                                runOnUiThread(
+                                        ()-> {
+                                            String msgNo = "Usuario y contraseña no son correcto";
+                                            Toast toast = Toast.makeText(this, msgNo, Toast.LENGTH_LONG);
+                                            toast.show();
+                                        });
+                            }
 
                         }
-
 
                     } catch (IOException e) {
                         e.printStackTrace();
